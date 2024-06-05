@@ -13,24 +13,21 @@ type comments struct {
 
 	Total  int
 	Thread []struct {
-		CommentId, ParentId, Replies, Likes int
-		Posted                              time
-		IsAuthorHighlited                   bool
+		Replies, Likes int
+		ID             int `json:"commentId"`
+		Parent         int `json:"ParrentId"`
+
+		Posted time
+		Author bool `json:"isAuthorHighlited"`
 
 		Desctiption string
+		Comment     string
 
-		// упрощение структуры с комментами
-		Comment string
-
-		TextContent struct {
-			Html struct {
-				Markup string
-			}
-		}
+		TextContent text
 
 		User struct {
 			Username string
-			IsBanned bool
+			Banned   bool `json:"isBanned"`
 		}
 	}
 }

@@ -1,3 +1,2 @@
-- ~~users~~
-- ~~groups~~
-- ~~images in comments~~
+- groups
+- images in comments

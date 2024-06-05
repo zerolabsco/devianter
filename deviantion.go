@@ -21,10 +21,14 @@ func (t *time) UnmarshalJSON(b []byte) (err error) {
 
 // самая главная структура для поста
 type deviantion struct {
-	Title, Url, License                       string
-	PublishedTime                             time
-	IsMature, IsAiGenerated, IsDailyDeviation bool
-	Author                                    struct {
+	Title, Url, License string
+	PublishedTime       time
+
+	NSFW bool `json:"isMature"`
+	AI   bool `json:"isAiGenerated"`
+	DD   bool `json:"isDailyDeviation"`
+
+	Author struct {
 		Username string
 	}
 	Stats struct {
@@ -54,11 +58,13 @@ type media struct {
 }
 
 type text struct {
-	Html struct {
+	Excerpt string
+	Html    struct {
 		Markup, Type string
 	}
 }
 
+// структура поста
 type Deviantion struct {
 	Deviation deviantion
 	Comments  struct {
@@ -73,7 +79,6 @@ type Deviantion struct {
 	}
 
 	IMG, Desctiption string
-	Recomendations   []deviantion
 }
 
 // для работы функции нужно ID поста и имя пользователя.
@@ -98,7 +103,7 @@ func Deviation(id string, user string) Deviantion {
 
 	// базовая обработка описания
 	txt := st.Deviation.TextContent.Html.Markup
-	if len(txt) > 0 && txt[0:1] == "{" {
+	if len(txt) > 0 && txt[1] == 125 {
 		var description struct {
 			Blocks []struct {
 				Text string

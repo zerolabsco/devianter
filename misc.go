@@ -3,11 +3,11 @@ package devianter
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"math"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -117,27 +117,44 @@ func AEmedia(name string, t rune) (string, error) {
 
 /* SEARCH */
 type search struct {
-	Total      int `json:"estTotal"`
-	Pages      int // only for 'a' scope.
-	Deviations []deviantion
+	Total   int          `json:"estTotal"`
+	Pages   int          // only for 'a' and 'g' scope.
+	Results []deviantion `json:"deviations,results"`
 }
 
-func Search(query, page string, scope rune) (ss search) {
+func Search(query string, page int, scope rune, user ...string) (ss search, e error) {
 	var url strings.Builder
+	e = nil
 
 	// о5 построение ссылок.
 	switch scope {
-	case 'a':
+	case 'a': // поиск артов по названию
 		url.WriteString("dabrowse/search/all?q=")
-	case 't':
+	case 't': // поиск артов по тегам
 		url.WriteString("dabrowse/networkbar/tag/deviations?tag=")
+	case 'g': // поиск артов пользователя или группы
+		if user != nil {
+			url.WriteString("dashared/gallection/search?username=")
+			for _, a := range user {
+				url.WriteString(a)
+			}
+			url.WriteString("&type=gallery&order=most-recent&init=true&limit=50&q=")
+		} else {
+			e = errors.New("Missing username (last argument)")
+			return
+		}
 	default:
-		log.Fatalln("Invalid type.\n- 'a' -- all;\n- 't' -- tag.")
+		log.Fatalln("Invalid type.\n- 'a' -- all;\n- 't' -- tag;\n- 'g' - gallery.")
 	}
 
 	url.WriteString(query)
-	url.WriteString("&page=")
-	url.WriteString(page)
+	if scope != 'g' { // если область поиска не равна поиску по группам, то активируется этот код
+		url.WriteString("&page=")
+	} else { // иначе вместо страницы будет оффсет и страница умножится на 50
+		url.WriteString("&offset=")
+		page = 50 * page
+	}
+	url.WriteString(strconv.Itoa(page))
 
 	ujson(url.String(), &ss)
 
@@ -184,10 +201,14 @@ func puppy(data string) (string, error) {
 		}
 	}
 
-	body := request(
-		fmt.Sprintf("https://www.deviantart.com/_puppy/%s&csrf_token=%s&da_minor_version=20230710", data, token),
-		cookie,
-	)
+	var url strings.Builder
+	url.WriteString("https://www.deviantart.com/_puppy/")
+	url.WriteString(data)
+	url.WriteString("&csrf_token=")
+	url.WriteString(token)
+	url.WriteString("&da_minor_version=20230710")
+
+	body := request(url.String(), cookie)
 
 	// если код ответа не 200, возвращается ошибка
 	if body.Status != 200 {
