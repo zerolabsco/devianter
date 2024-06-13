@@ -6,7 +6,7 @@ import (
 )
 
 // структура группы или пользователя
-type Group struct {
+type GRuser struct {
 	ErrorDescription string
 	Owner            struct {
 		Group    bool `json:"isGroup"`
@@ -30,7 +30,7 @@ type Group struct {
 						}
 					}
 					CoverDeviation struct {
-						Deviation deviantion `json:"coverDeviation"`
+						Deviation Deviation `json:"coverDeviation"`
 					}
 
 					// группы
@@ -56,7 +56,7 @@ type Group struct {
 						Folder struct {
 							Username   string
 							Pages      int `json:"totalPageCount"`
-							Deviations []deviantion
+							Deviations []Deviation
 						} `json:"folderDeviations"`
 					}
 				}
@@ -72,17 +72,23 @@ type Group struct {
 	}
 }
 
-func UGroup(name string) (g Group) {
-	ujson("dauserprofile/init/about?username="+name, &g)
+type Group struct {
+	Name    string // обязательно заполнить
+	Content GRuser
+}
+
+// подходит как группа, так и пользователь
+func (s Group) GroupFunc() (g Group) {
+	ujson("dauserprofile/init/about?username="+s.Name, &g)
 
 	return
 }
 
 // гарелея пользователя или группы
-func Gallery(name string, page int) (g Group) {
+func (s Group) Gallery(page int) (g Group) {
 	var url strings.Builder
 	url.WriteString("dauserprofile/init/gallery?username=")
-	url.WriteString(name)
+	url.WriteString(s.Name)
 	url.WriteString("&page=")
 	url.WriteString(strconv.Itoa(page))
 	url.WriteString("&deviations_limit=50&with_subfolders=false")

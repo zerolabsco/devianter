@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-type comments struct {
+type Comments struct {
 	Cursor           string
 	PrevOffset       int
 	HasMore, HasLess bool
@@ -33,12 +33,12 @@ type comments struct {
 }
 
 // функция для обработки комментариев поста, пользователя, группы и многого другого
-func Comments(
+func CommentsFunc(
 	postid string,
 	cursor string,
 	page int,
 	typ int, // 1 - комментарии поста; 4 - комментарии на стене группы или пользователя
-) (cmmts comments) {
+) (cmmts Comments) {
 	for x := 0; x <= page; x++ {
 		ujson(
 			"dashared/comments/thread?typeid="+strconv.Itoa(typ)+
@@ -55,7 +55,7 @@ func Comments(
 			cmmts.Thread[i].Comment = m
 
 			// если начало строки {, а конец }, то срабатывает этот иф
-			if m[0] == 123 && m[l-1] == 125 {
+			if m[0] == '{' && m[l-1] == '}' {
 				var content struct {
 					Blocks []struct {
 						Text string

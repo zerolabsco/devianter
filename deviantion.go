@@ -3,6 +3,7 @@ package devianter
 import (
 	"encoding/json"
 	"strconv"
+	"strings"
 	timelib "time"
 )
 
@@ -20,7 +21,7 @@ func (t *time) UnmarshalJSON(b []byte) (err error) {
 }
 
 // самая главная структура для поста
-type deviantion struct {
+type Deviation struct {
 	Title, Url, License string
 	PublishedTime       time
 
@@ -41,7 +42,7 @@ type deviantion struct {
 		}
 		DescriptionText text
 		RelatedContent  []struct {
-			Deviations []deviantion
+			Deviations []Deviation
 		}
 	}
 	TextContent text
@@ -65,8 +66,8 @@ type text struct {
 }
 
 // структура поста
-type Deviantion struct {
-	Deviation deviantion
+type Post struct {
+	Deviation Deviation
 	Comments  struct {
 		Total  int
 		Cursor string
@@ -78,32 +79,44 @@ type Deviantion struct {
 		Replies, Likes int
 	}
 
-	IMG, Desctiption string
+	IMG, Description string
+}
+
+// преобразование урла в правильный
+func UrlFromMedia(m media) string {
+	var url strings.Builder
+	for _, t := range m.Types {
+		if t.T == "fullview" {
+			url.WriteString(m.BaseUri)
+			if m.BaseUri[len(m.BaseUri)-3:] != "gif" && t.W*t.H < 33177600 {
+				url.WriteString("/v1/fill/w_")
+				url.WriteString(strconv.Itoa(t.W))
+				url.WriteString(",h_")
+				url.WriteString(strconv.Itoa(t.H))
+				url.WriteString("/")
+				url.WriteString("image")
+				url.WriteString(".gif")
+			}
+			url.WriteString("?token=")
+			url.WriteString(m.Token[0])
+		}
+	}
+	return url.String()
 }
 
 // для работы функции нужно ID поста и имя пользователя.
-func Deviation(id string, user string) Deviantion {
-	var st Deviantion
+func DeviationFunc(id string, user string) Post {
+	var st Post
 	ujson(
 		"dadeviation/init?deviationid="+id+"&username="+user+"&type=art&include_session=false&expand=deviation.related&preload=true",
 		&st,
 	)
 
-	// преобразование урла в правильный
-	for _, t := range st.Deviation.Media.Types {
-		if m := st.Deviation.Media; t.T == "fullview" {
-			if len(m.Token) > 0 {
-				st.IMG = m.BaseUri + "?token="
-			} else {
-				st.IMG = m.BaseUri + "/v1/fill/w_" + strconv.Itoa(t.W) + ",h_" + strconv.Itoa(t.H) + "/" + id + "_" + user + ".gif" + "?token="
-			}
-			st.IMG += m.Token[0]
-		}
-	}
+	st.IMG = UrlFromMedia(st.Deviation.Media)
 
 	// базовая обработка описания
 	txt := st.Deviation.TextContent.Html.Markup
-	if len(txt) > 0 && txt[1] == 125 {
+	if len(txt) > 0 && txt[1] == '{' {
 		var description struct {
 			Blocks []struct {
 				Text string
@@ -116,7 +129,7 @@ func Deviation(id string, user string) Deviantion {
 		}
 	}
 
-	st.Desctiption = txt
+	st.Description = txt
 
 	return st
 }

@@ -116,13 +116,13 @@ func AEmedia(name string, t rune) (string, error) {
 }
 
 /* SEARCH */
-type search struct {
-	Total   int          `json:"estTotal"`
-	Pages   int          // only for 'a' and 'g' scope.
-	Results []deviantion `json:"deviations,results"`
+type Search struct {
+	Total   int         `json:"estTotal"`
+	Pages   int         // only for 'a' and 'g' scope.
+	Results []Deviation `json:"deviations,results"`
 }
 
-func Search(query string, page int, scope rune, user ...string) (ss search, e error) {
+func SearchFunc(query string, page int, scope rune, user ...string) (ss Search, e error) {
 	var url strings.Builder
 	e = nil
 
@@ -159,7 +159,8 @@ func Search(query string, page int, scope rune, user ...string) (ss search, e er
 	ujson(url.String(), &ss)
 
 	// расчёт, сколько всего страниц по запросу. без токена 417 страниц - максимум
-	for x := 0; x < int(math.Round(float64(ss.Total/25))); x++ {
+	totalfloat := int(math.Round(float64(ss.Total / 25)))
+	for x := 0; x < totalfloat; x++ {
 		if x <= 417 {
 			ss.Pages = x
 		}
