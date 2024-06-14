@@ -97,8 +97,10 @@ func UrlFromMedia(m media) string {
 				url.WriteString("image")
 				url.WriteString(".gif")
 			}
-			url.WriteString("?token=")
-			url.WriteString(m.Token[0])
+			if len(m.Token) > 0 {
+				url.WriteString("?token=")
+				url.WriteString(m.Token[0])
+			}
 		}
 	}
 	return url.String()

@@ -15,7 +15,7 @@ type Comments struct {
 	Thread []struct {
 		Replies, Likes int
 		ID             int `json:"commentId"`
-		Parent         int `json:"ParrentId"`
+		Parent         int `json:"parentId"`
 
 		Posted time
 		Author bool `json:"isAuthorHighlited"`

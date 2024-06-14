@@ -115,10 +115,27 @@ func AEmedia(name string, t rune) (string, error) {
 	return "", errors.New("User not exists")
 }
 
+/* DAILY DEVIATIONS */
+type DailyDeviations struct {
+	HasMore bool
+	Strips  []struct {
+		Codename, Title string
+		TitleType       string
+		Deviations      []Deviation
+	}
+	Deviations []Deviation
+}
+
+func DailyDeviationsFunc(page int) (dd DailyDeviations) {
+	ujson("dabrowse/networkbar/rfy/deviations?page="+strconv.Itoa(page), &dd)
+	return
+}
+
 /* SEARCH */
 type Search struct {
-	Total   int         `json:"estTotal"`
-	Pages   int         // only for 'a' and 'g' scope.
+	Total   int `json:"estTotal"`
+	Pages   int // only for 'a' and 'g' scope.
+	HasMore bool
 	Results []Deviation `json:"deviations,results"`
 }
 
@@ -170,38 +187,29 @@ func SearchFunc(query string, page int, scope rune, user ...string) (ss Search, 
 }
 
 /* PUPPY aka DeviantArt API */
+// получение или обновление токена
+var cookie string
+var token string
+
+func UpdateCSRF() error {
+	if cookie == "" {
+		req := request("https://www.deviantart.com/_puppy")
+
+		for _, content := range req.Cookies {
+			cookie = content.Raw
+		}
+	}
+
+	req := request("https://www.deviantart.com", cookie)
+	if req.Status != 200 {
+		return errors.New(req.Body)
+	}
+	token = req.Body[strings.Index(req.Body, "window.__CSRF_TOKEN__ = '")+25 : strings.Index(req.Body, "window.__XHR_LOCAL__")-3]
+
+	return nil
+}
+
 func puppy(data string) (string, error) {
-	// получение или обновление токена
-	update := func() (string, string, error) {
-		var cookie string
-		if cookie == "" {
-			req := request("https://www.deviantart.com/_puppy")
-
-			for _, content := range req.Cookies {
-				cookie = content.Raw
-			}
-		}
-
-		req := request("https://www.deviantart.com", cookie)
-		if req.Status != 200 {
-			return "", "", errors.New(req.Body)
-		}
-
-		return cookie, req.Body[strings.Index(req.Body, "window.__CSRF_TOKEN__ = '")+25 : strings.Index(req.Body, "window.__XHR_LOCAL__")-3], nil
-	}
-
-	// использование токена
-	var (
-		cookie, token string
-	)
-	if cookie == "" || token == "" {
-		var e error
-		cookie, token, e = update()
-		if e != nil {
-			return "", e
-		}
-	}
-
 	var url strings.Builder
 	url.WriteString("https://www.deviantart.com/_puppy/")
 	url.WriteString(data)
