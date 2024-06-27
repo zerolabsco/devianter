@@ -6,6 +6,38 @@ import (
 )
 
 // структура группы или пользователя
+type groups struct {
+	GroupAbout struct {
+		FoundatedAt time `json:"foundationTs"`
+		Description Text
+	}
+	GroupAdmins struct {
+		Results []struct {
+			Username string
+		}
+	}
+}
+
+type About struct {
+	Country, Website, WebsiteLabel, Gender string
+	RegDate                                int64 `json:"deviantFor"`
+	Description                            Text  `json:"textContent"`
+
+	SocialLinks []struct {
+		Value string
+	}
+	Interests []struct {
+		Label, Value string
+	}
+}
+
+type users struct {
+	About          About
+	CoverDeviation struct {
+		Deviation Deviation `json:"coverDeviation"`
+	}
+}
+
 type GRuser struct {
 	ErrorDescription string
 	Owner            struct {
@@ -18,32 +50,10 @@ type GRuser struct {
 			Modules []struct {
 				Name       string
 				ModuleData struct {
-					About struct {
-						Country, Website, WebsiteLabel, Gender, Tagline string
-						DeviantFor                                      int64
-						SocialLinks                                     []struct {
-							Value string
-						}
-						TextContent text
-						Interests   []struct {
-							Label, Value string
-						}
-					}
-					CoverDeviation struct {
-						Deviation Deviation `json:"coverDeviation"`
-					}
+					groups
+					users
 
 					// группы
-					GroupAbout struct {
-						Tagline     string
-						CreatinDate time `json:"foundationTs"`
-						Description text
-					}
-					GroupAdmins struct {
-						Results []struct {
-							Username string
-						}
-					}
 					Folders struct {
 						Results []struct {
 							FolderId int
@@ -52,24 +62,22 @@ type GRuser struct {
 					}
 
 					// галерея
-					ModuleData struct {
-						Folder struct {
-							Username   string
-							Pages      int `json:"totalPageCount"`
-							Deviations []Deviation
-						} `json:"folderDeviations"`
-					}
+					Folder struct {
+						Username   string
+						Pages      int `json:"totalPageCount"`
+						Deviations []Deviation
+					} `json:"folderDeviations"`
 				}
 			}
 		}
 	}
-	PageExtraData struct {
-		GruserTagline string
-		Stats         struct {
+	Extra struct {
+		Tag   string `json:"gruserTagline"`
+		Stats struct {
 			Deviations, Watchers, Watching, Pageviews, CommentsMade, Favourites, Friends int
 			FeedComments                                                                 int `json:"commentsReceivedProfile"`
 		}
-	}
+	} `json:"pageExtraData"`
 }
 
 type Group struct {
@@ -78,7 +86,7 @@ type Group struct {
 }
 
 // подходит как группа, так и пользователь
-func (s Group) GroupFunc() (g Group) {
+func (s Group) GroupFunc() (g GRuser) {
 	ujson("dauserprofile/init/about?username="+s.Name, &g)
 
 	return

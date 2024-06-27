@@ -35,21 +35,21 @@ type Deviation struct {
 	Stats struct {
 		Favourites, Views, Downloads int
 	}
-	Media    media
+	Media    Media
 	Extended struct {
 		Tags []struct {
 			Name string
 		}
-		DescriptionText text
+		DescriptionText Text
 		RelatedContent  []struct {
 			Deviations []Deviation
 		}
 	}
-	TextContent text
+	TextContent Text
 }
 
 // её выпердыши
-type media struct {
+type Media struct {
 	BaseUri string
 	Token   []string
 	Types   []struct {
@@ -58,7 +58,7 @@ type media struct {
 	}
 }
 
-type text struct {
+type Text struct {
 	Excerpt string
 	Html    struct {
 		Markup, Type string
@@ -83,7 +83,7 @@ type Post struct {
 }
 
 // преобразование урла в правильный
-func UrlFromMedia(m media) string {
+func UrlFromMedia(m Media) string {
 	var url strings.Builder
 	for _, t := range m.Types {
 		if t.T == "fullview" {

@@ -23,7 +23,7 @@ type Comments struct {
 		Desctiption string
 		Comment     string
 
-		TextContent text
+		TextContent Text
 
 		User struct {
 			Username string

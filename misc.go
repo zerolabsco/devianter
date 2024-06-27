@@ -48,14 +48,12 @@ func request(uri string, other ...string) reqrt {
 	req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:123.0) Gecko/20100101 Firefox/123.0.0")
 
 	// куки и UA-шник
-	if other != nil {
-		for num, rng := range other {
-			switch num {
-			case 1:
-				req.Header.Set("User-Agent", rng)
-			case 0:
-				req.Header.Set("Cookie", rng)
-			}
+	for num, rng := range other {
+		switch num {
+		case 1:
+			req.Header.Set("User-Agent", rng)
+		case 0:
+			req.Header.Set("Cookie", rng)
 		}
 	}
 
@@ -112,7 +110,7 @@ func AEmedia(name string, t rune) (string, error) {
 		}
 	}
 
-	return "", errors.New("User not exists")
+	return "", errors.New("user not exists")
 }
 
 /* DAILY DEVIATIONS */
@@ -157,7 +155,7 @@ func SearchFunc(query string, page int, scope rune, user ...string) (ss Search, 
 			}
 			url.WriteString("&type=gallery&order=most-recent&init=true&limit=50&q=")
 		} else {
-			e = errors.New("Missing username (last argument)")
+			e = errors.New("missing username (last argument)")
 			return
 		}
 	default:
