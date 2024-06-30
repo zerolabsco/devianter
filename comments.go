@@ -2,9 +2,28 @@ package devianter
 
 import (
 	"encoding/json"
+	"net/url"
 	"strconv"
-	"strings"
 )
+
+type Thread struct {
+	Replies, Likes int
+	ID             int `json:"commentId"`
+	Parent         int `json:"parentId"`
+
+	Posted time
+	Author bool `json:"isAuthorHighlited"`
+
+	Desctiption string
+	Comment     string
+
+	TextContent Text
+
+	User struct {
+		Username string
+		Banned   bool `json:"isBanned"`
+	}
+}
 
 type Comments struct {
 	Cursor           string
@@ -12,38 +31,16 @@ type Comments struct {
 	HasMore, HasLess bool
 
 	Total  int
-	Thread []struct {
-		Replies, Likes int
-		ID             int `json:"commentId"`
-		Parent         int `json:"parentId"`
-
-		Posted time
-		Author bool `json:"isAuthorHighlited"`
-
-		Desctiption string
-		Comment     string
-
-		TextContent Text
-
-		User struct {
-			Username string
-			Banned   bool `json:"isBanned"`
-		}
-	}
+	Thread []Thread
 }
 
-// функция для обработки комментариев поста, пользователя, группы и многого другого
-func CommentsFunc(
-	postid string,
-	cursor string,
-	page int,
-	typ int, // 1 - комментарии поста; 4 - комментарии на стене группы или пользователя
-) (cmmts Comments) {
+// 1 - комментарии поста; 4 - комментарии на стене группы или пользователя
+func CommentsFunc(postid string, cursor string, page int, typ int) (cmmts Comments) {
 	for x := 0; x <= page; x++ {
 		ujson(
 			"dashared/comments/thread?typeid="+strconv.Itoa(typ)+
 				"&itemid="+postid+"&maxdepth=1000&order=newest"+
-				"&limit=50&cursor="+strings.ReplaceAll(cursor, "+", `%2B`),
+				"&limit=50&cursor="+url.QueryEscape(cursor),
 			&cmmts,
 		)
 

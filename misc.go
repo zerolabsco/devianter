@@ -7,6 +7,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	u "net/url"
 	"strconv"
 	"strings"
 )
@@ -131,10 +132,11 @@ func DailyDeviationsFunc(page int) (dd DailyDeviations) {
 
 /* SEARCH */
 type Search struct {
-	Total   int `json:"estTotal"`
-	Pages   int // only for 'a' and 'g' scope.
-	HasMore bool
-	Results []Deviation `json:"deviations,results"`
+	Total              int `json:"estTotal"`
+	Pages              int // only for 'a' and 'g' scope.
+	HasMore            bool
+	Results            []Deviation `json:"deviations"`
+	ResultsGalleryTemp []Deviation `json:"results"`
 }
 
 func SearchFunc(query string, page int, scope rune, user ...string) (ss Search, e error) {
@@ -162,7 +164,7 @@ func SearchFunc(query string, page int, scope rune, user ...string) (ss Search, 
 		log.Fatalln("Invalid type.\n- 'a' -- all;\n- 't' -- tag;\n- 'g' - gallery.")
 	}
 
-	url.WriteString(query)
+	url.WriteString(u.QueryEscape(query))
 	if scope != 'g' { // если область поиска не равна поиску по группам, то активируется этот код
 		url.WriteString("&page=")
 	} else { // иначе вместо страницы будет оффсет и страница умножится на 50
@@ -172,6 +174,10 @@ func SearchFunc(query string, page int, scope rune, user ...string) (ss Search, 
 	url.WriteString(strconv.Itoa(page))
 
 	ujson(url.String(), &ss)
+
+	if scope == 'g' {
+		ss.Results = ss.ResultsGalleryTemp
+	}
 
 	// расчёт, сколько всего страниц по запросу. без токена 417 страниц - максимум
 	totalfloat := int(math.Round(float64(ss.Total / 25)))
