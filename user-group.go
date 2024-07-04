@@ -6,13 +6,14 @@ import (
 )
 
 // структура группы или пользователя
-type groups struct {
-	GroupAbout struct {
-		FoundatedAt time `json:"foundationTs"`
-		Description Text
-	}
-	GroupAdmins struct {
-		Results []struct {
+type GroupAbout struct {
+	FoundatedAt time `json:"foundationTs"`
+	Description Text
+}
+type GroupAdmins struct {
+	Results []struct {
+		TypeId int
+		User   struct {
 			Username string
 		}
 	}
@@ -50,23 +51,9 @@ type GRuser struct {
 			Modules []struct {
 				Name       string
 				ModuleData struct {
-					groups
+					GroupAbout  GroupAbout
+					GroupAdmins GroupAdmins
 					users
-
-					// группы
-					Folders struct {
-						Results []struct {
-							FolderId int
-							Name     string
-						}
-					}
-
-					// галерея
-					Folder struct {
-						Username   string
-						Pages      int `json:"totalPageCount"`
-						Deviations []Deviation
-					} `json:"folderDeviations"`
 				}
 			}
 		}
@@ -80,9 +67,40 @@ type GRuser struct {
 	} `json:"pageExtraData"`
 }
 
+type Gallery struct {
+	Gruser struct {
+		ID   int `json:"gruserId"`
+		Page struct {
+			Modules []struct {
+				Name       string
+				ModuleData struct {
+					// группы
+					Folders struct {
+						HasMore bool
+						Results []struct {
+							FolderId int
+							Name     string
+						}
+					}
+
+					// галерея
+					Folder struct {
+						HasMore    bool
+						Username   string
+						Pages      int `json:"totalPageCount"`
+						Deviations []Deviation
+					} `json:"folderDeviations"`
+				}
+			}
+		}
+	}
+	HasMore bool
+	Results []Deviation
+}
+
 type Group struct {
 	Name    string // обязательно заполнить
-	Content GRuser
+	Content Gallery
 }
 
 // подходит как группа, так и пользователь
@@ -93,14 +111,27 @@ func (s Group) GroupFunc() (g GRuser) {
 }
 
 // гарелея пользователя или группы
-func (s Group) Gallery(page int) (g Group) {
+func (s Group) Gallery(page int, folderid ...int) (g Group) {
 	var url strings.Builder
-	url.WriteString("dauserprofile/init/gallery?username=")
-	url.WriteString(s.Name)
-	url.WriteString("&page=")
-	url.WriteString(strconv.Itoa(page))
-	url.WriteString("&deviations_limit=50&with_subfolders=false")
+	if folderid[0] > 0 {
+		page--
+		url.WriteString("dashared/gallection/contents?username=")
+		url.WriteString(s.Name)
+		url.WriteString("&folderid=")
+		url.WriteString(strconv.Itoa(folderid[0]))
+		url.WriteString("&offset=")
+		url.WriteString(strconv.Itoa(page * 50))
+		url.WriteString("&type=gallery&")
+	} else {
+		url.WriteString("dauserprofile/init/gallery?username=")
+		url.WriteString(s.Name)
+		url.WriteString("&page=")
+		url.WriteString(strconv.Itoa(page))
+		url.WriteString("&deviations_")
+	}
+	url.WriteString("limit=50")
+	url.WriteString("&with_subfolders=false")
 
-	ujson(url.String(), &g)
+	ujson(url.String(), &g.Content)
 	return
 }
