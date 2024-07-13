@@ -24,6 +24,7 @@ func (t *time) UnmarshalJSON(b []byte) (err error) {
 type Deviation struct {
 	Title, Url, License string
 	PublishedTime       time
+	ID                  int `json:"deviationId"`
 
 	NSFW bool `json:"isMature"`
 	AI   bool `json:"isAiGenerated"`
@@ -39,6 +40,12 @@ type Deviation struct {
 	Extended struct {
 		Tags []struct {
 			Name string
+		}
+		OriginalFile struct {
+			Type     string
+			Width    int
+			Height   int
+			Filesize int
 		}
 		DescriptionText Text
 		RelatedContent  []struct {
@@ -89,7 +96,7 @@ func UrlFromMedia(m Media) string {
 		if t.T == "fullview" {
 			url.WriteString(m.BaseUri)
 			if m.BaseUri[len(m.BaseUri)-3:] != "gif" && t.W*t.H < 33177600 {
-				url.WriteString("/v1/fill/w_")
+				url.WriteString("/v1/fit/w_")
 				url.WriteString(strconv.Itoa(t.W))
 				url.WriteString(",h_")
 				url.WriteString(strconv.Itoa(t.H))

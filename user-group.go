@@ -79,7 +79,9 @@ type Gallery struct {
 						HasMore bool
 						Results []struct {
 							FolderId int
+							Size     int
 							Name     string
+							Thumb    Deviation
 						}
 					}
 
