@@ -4,26 +4,26 @@ import (
 	"encoding/json"
 	"strconv"
 	"strings"
-	timelib "time"
+	"time"
 )
 
 // хрень для парсинга времени публикации
-type time struct {
-	timelib.Time
+type timeStamp struct {
+	time.Time
 }
 
-func (t *time) UnmarshalJSON(b []byte) (err error) {
+func (t *timeStamp) UnmarshalJSON(b []byte) (err error) {
 	if b[0] == '"' && b[len(b)-1] == '"' {
 		b = b[1 : len(b)-1]
 	}
-	t.Time, err = timelib.Parse("2006-01-02T15:04:05-0700", string(b))
+	t.Time, err = time.Parse("2006-01-02T15:04:05-0700", string(b))
 	return
 }
 
 // самая главная структура для поста
 type Deviation struct {
 	Title, Url, License string
-	PublishedTime       time
+	PublishedTime       timeStamp
 	ID                  int `json:"deviationId"`
 
 	NSFW bool `json:"isMature"`
@@ -82,7 +82,7 @@ type Post struct {
 
 	ParsedComments []struct {
 		Author         string
-		Posted         time
+		Posted         timeStamp
 		Replies, Likes int
 	}
 
@@ -90,12 +90,25 @@ type Post struct {
 }
 
 // преобразование урла в правильный
-func UrlFromMedia(m Media) string {
+func UrlFromMedia(m Media, thumb ...int) string {
 	var url strings.Builder
+
+	subtractWidthHeight := func(to int, target ...*int) {
+		for i, l := 0, len(target); i < l; i++ {
+			for x := *target[i]; x > to; x -= to {
+				*target[i] = x
+			}
+		}
+	}
+
 	for _, t := range m.Types {
 		if t.T == "fullview" {
 			url.WriteString(m.BaseUri)
 			if m.BaseUri[len(m.BaseUri)-3:] != "gif" && t.W*t.H < 33177600 {
+				if len(thumb) != 0 {
+					subtractWidthHeight(thumb[0], &t.W, &t.H)
+				}
+
 				url.WriteString("/v1/fit/w_")
 				url.WriteString(strconv.Itoa(t.W))
 				url.WriteString(",h_")
@@ -110,11 +123,12 @@ func UrlFromMedia(m Media) string {
 			}
 		}
 	}
+
 	return url.String()
 }
 
 // для работы функции нужно ID поста и имя пользователя.
-func DeviationFunc(id string, user string) Post {
+func GetDeviation(id string, user string) Post {
 	var st Post
 	ujson(
 		"dadeviation/init?deviationid="+id+"&username="+user+"&type=art&include_session=false&expand=deviation.related&preload=true",

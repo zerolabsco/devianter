@@ -9,7 +9,7 @@ import (
 )
 
 // функция для высера ошибки в stderr
-func err(txt error) {
+func try(txt error) {
 	if txt != nil {
 		println(txt.Error())
 	}
@@ -17,11 +17,9 @@ func err(txt error) {
 
 // сокращение для вызова щенка и парсинга жсона
 func ujson(data string, output any) {
-	input, e := puppy(data)
-	err(e)
-
-	eee := json.Unmarshal([]byte(input), output)
-	err(eee)
+	input, err := puppy(data)
+	try(err)
+	try(json.Unmarshal([]byte(input), output))
 }
 
 /* REQUEST SECTION */
@@ -34,32 +32,32 @@ type reqrt struct {
 }
 
 // функция для совершения запроса
+var UserAgent string
+
 func request(uri string, other ...string) reqrt {
 	var r reqrt
 
 	// создаём новый запрос
 	cli := &http.Client{}
 	req, e := http.NewRequest("GET", uri, nil)
-	err(e)
+	try(e)
 
 	req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:123.0) Gecko/20100101 Firefox/123.0.0")
 
 	// куки и UA-шник
-	for num, rng := range other {
-		switch num {
-		case 1:
-			req.Header.Set("User-Agent", rng)
-		case 0:
-			req.Header.Set("Cookie", rng)
-		}
+	if UserAgent != "" {
+		req.Header.Set("User-Agent", UserAgent)
+	}
+	if len(other) != 0 {
+		req.Header.Set("Cookie", other[0])
 	}
 
 	resp, e := cli.Do(req)
-	err(e)
+	try(e)
 	defer resp.Body.Close()
 
 	body, e := io.ReadAll(resp.Body)
-	err(e)
+	try(e)
 
 	// заполняем структуру
 	r.Body = string(body)

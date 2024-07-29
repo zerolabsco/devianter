@@ -1,2 +1,0 @@
-- groups
-- images in comments

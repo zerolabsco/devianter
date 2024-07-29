@@ -11,7 +11,7 @@ type Thread struct {
 	ID             int `json:"commentId"`
 	Parent         int `json:"parentId"`
 
-	Posted time
+	Posted timeStamp
 	Author bool `json:"isAuthorHighlited"`
 
 	Desctiption string
@@ -35,7 +35,7 @@ type Comments struct {
 }
 
 // 1 - комментарии поста; 4 - комментарии на стене группы или пользователя
-func CommentsFunc(postid string, cursor string, page int, typ int) (cmmts Comments) {
+func GetComments(postid string, cursor string, page int, typ int) (cmmts Comments) {
 	for x := 0; x <= page; x++ {
 		ujson(
 			"dashared/comments/thread?typeid="+strconv.Itoa(typ)+
@@ -60,7 +60,7 @@ func CommentsFunc(postid string, cursor string, page int, typ int) (cmmts Commen
 				}
 
 				e := json.Unmarshal([]byte(m), &content)
-				err(e)
+				try(e)
 
 				for _, a := range content.Blocks {
 					cmmts.Thread[i].Comment = a.Text

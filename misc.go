@@ -4,13 +4,16 @@ import (
 	"errors"
 	"log"
 	"math"
-	u "net/url"
+	"net/url"
 	"strconv"
 	"strings"
 )
 
 /* AVATARS AND EMOJIS */
 func AEmedia(name string, t rune) (string, error) {
+	if len(name) < 2 {
+		return "", errors.New("name must be specified")
+	}
 	// список всех возможных расширений
 	var extensions = [3]string{
 		".jpg",
@@ -25,9 +28,10 @@ func AEmedia(name string, t rune) (string, error) {
 	switch t {
 	case 'a':
 		b.WriteString("https://a.deviantart.net/avatars-big/")
-		b.WriteString(name[:1])
+		name_without_dashes := strings.ReplaceAll(name, "-", "_")
+		b.WriteString(name_without_dashes[:1])
 		b.WriteString("/")
-		b.WriteString(name[1:2])
+		b.WriteString(name_without_dashes[1:2])
 		b.WriteString("/")
 	case 'e':
 		b.WriteString("https://e.deviantart.net/emoticons/")
@@ -60,7 +64,7 @@ type DailyDeviations struct {
 	Deviations []Deviation
 }
 
-func DailyDeviationsFunc(page int) (dd DailyDeviations) {
+func GetDailyDeviations(page int) (dd DailyDeviations) {
 	ujson("dabrowse/networkbar/rfy/deviations?page="+strconv.Itoa(page), &dd)
 	return
 }
@@ -74,23 +78,21 @@ type Search struct {
 	ResultsGalleryTemp []Deviation `json:"results"`
 }
 
-func SearchFunc(query string, page int, scope rune, user ...string) (ss Search, e error) {
-	var url strings.Builder
+func PerformSearch(query string, page int, scope rune, user ...string) (ss Search, e error) {
+	var buildurl strings.Builder
 	e = nil
 
 	// о5 построение ссылок.
 	switch scope {
 	case 'a': // поиск артов по названию
-		url.WriteString("dabrowse/search/all?q=")
+		buildurl.WriteString("dabrowse/search/all?q=")
 	case 't': // поиск артов по тегам
-		url.WriteString("dabrowse/networkbar/tag/deviations?tag=")
+		buildurl.WriteString("dabrowse/networkbar/tag/deviations?tag=")
 	case 'g': // поиск артов пользователя или группы
 		if user != nil {
-			url.WriteString("dashared/gallection/search?username=")
-			for _, a := range user {
-				url.WriteString(a)
-			}
-			url.WriteString("&type=gallery&order=most-recent&init=true&limit=50&q=")
+			buildurl.WriteString("dashared/gallection/search?username=")
+			buildurl.WriteString(user[0])
+			buildurl.WriteString("&type=gallery&order=most-recent&init=true&limit=50&q=")
 		} else {
 			e = errors.New("missing username (last argument)")
 			return
@@ -99,16 +101,16 @@ func SearchFunc(query string, page int, scope rune, user ...string) (ss Search, 
 		log.Fatalln("Invalid type.\n- 'a' -- all;\n- 't' -- tag;\n- 'g' - gallery.")
 	}
 
-	url.WriteString(u.QueryEscape(query))
+	buildurl.WriteString(url.QueryEscape(query))
 	if scope != 'g' { // если область поиска не равна поиску по группам, то активируется этот код
-		url.WriteString("&page=")
+		buildurl.WriteString("&page=")
 	} else { // иначе вместо страницы будет оффсет и страница умножится на 50
-		url.WriteString("&offset=")
+		buildurl.WriteString("&offset=")
 		page = 50 * page
 	}
-	url.WriteString(strconv.Itoa(page))
+	buildurl.WriteString(strconv.Itoa(page))
 
-	ujson(url.String(), &ss)
+	ujson(buildurl.String(), &ss)
 
 	if scope == 'g' {
 		ss.Results = ss.ResultsGalleryTemp
