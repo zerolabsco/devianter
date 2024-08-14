@@ -104,7 +104,7 @@ func UrlFromMedia(m Media, thumb ...int) string {
 	for _, t := range m.Types {
 		if t.T == "fullview" {
 			url.WriteString(m.BaseUri)
-			if m.BaseUri[len(m.BaseUri)-3:] != "gif" && t.W*t.H < 33177600 {
+			if l := len(m.BaseUri); l != 0 && (m.BaseUri[l-3:] != "gif" && t.W*t.H < 33177600) {
 				if len(thumb) != 0 {
 					subtractWidthHeight(thumb[0], &t.W, &t.H)
 				}

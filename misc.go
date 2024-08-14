@@ -88,17 +88,23 @@ func PerformSearch(query string, page int, scope rune, user ...string) (ss Searc
 		buildurl.WriteString("dabrowse/search/all?q=")
 	case 't': // поиск артов по тегам
 		buildurl.WriteString("dabrowse/networkbar/tag/deviations?tag=")
-	case 'g': // поиск артов пользователя или группы
-		if user != nil {
-			buildurl.WriteString("dashared/gallection/search?username=")
-			buildurl.WriteString(user[0])
-			buildurl.WriteString("&type=gallery&order=most-recent&init=true&limit=50&q=")
-		} else {
+	case 'g', 'f': // поиск артов пользователя или группы
+		if user == nil {
 			e = errors.New("missing username (last argument)")
 			return
 		}
+
+		buildurl.WriteString("dashared/gallection/search?username=")
+		buildurl.WriteString(user[0])
+		buildurl.WriteString("&type=")
+		if scope == 'g' {
+			buildurl.WriteString("gallery")
+		} else {
+			buildurl.WriteString("collection")
+		}
+		buildurl.WriteString("&order=most-recent&init=true&limit=50&q=")
 	default:
-		log.Fatalln("Invalid type.\n- 'a' -- all;\n- 't' -- tag;\n- 'g' - gallery.")
+		log.Fatalln("Invalid type.\n- 'a' -- all;\n- 't' -- tag;\n- 'g' - gallery\n- 'f' - folders.")
 	}
 
 	buildurl.WriteString(url.QueryEscape(query))
@@ -112,11 +118,11 @@ func PerformSearch(query string, page int, scope rune, user ...string) (ss Searc
 
 	ujson(buildurl.String(), &ss)
 
-	if scope == 'g' {
+	if ss.Results == nil {
 		ss.Results = ss.ResultsGalleryTemp
 	}
 
-	// расчёт, сколько всего страниц по запросу. без токена 417 страниц - максимум
+	// расчёт, сколько всего страниц по запросу. без токена, 417 страниц - максимум
 	totalfloat := int(math.Round(float64(ss.Total / 25)))
 	for x := 0; x < totalfloat; x++ {
 		if x <= 417 {

@@ -46,10 +46,11 @@ type Gallery struct {
 					Folders struct {
 						HasMore bool
 						Results []struct {
-							FolderId int
-							Size     int
-							Name     string
-							Thumb    Deviation
+							Deviations int `json:"totalItemCount"`
+							FolderId   int
+							Size       int
+							Name       string
+							Thumb      Deviation
 						}
 					}
 
@@ -74,7 +75,7 @@ type Group struct {
 }
 
 // подходит как группа, так и пользователь
-func (s Group) GetGroup() (g GRuser, err error) {
+func (s Group) Get() (g GRuser, err error) {
 	if s.Name == "" {
 		return g, errors.New("missing Name field")
 	}
@@ -83,8 +84,33 @@ func (s Group) GetGroup() (g GRuser, err error) {
 	return
 }
 
+func (s Group) Favourites(page int, all bool, folderid ...int) (g Group) {
+	var url strings.Builder
+
+	if fid := folderid[0]; fid > 0 || all {
+		url.WriteString("dashared/gallection/contents")
+		if all {
+			url.WriteString("?all_folder=true")
+		} else {
+			url.WriteString("?folderid=")
+			url.WriteString(strconv.Itoa(fid))
+		}
+		url.WriteString("&type=collection&")
+	} else {
+		url.WriteString("dauserprofile/init/favourites?deviations_")
+	}
+
+	url.WriteString("limit=50&username=")
+	url.WriteString(s.Name)
+	url.WriteString("&with_subfolders=true&offset=")
+	url.WriteString(strconv.Itoa(page * 50))
+
+	ujson(url.String(), &g.Content)
+	return
+}
+
 // гарелея пользователя или группы
-func (s Group) GetGallery(page int, folderid ...int) (g Group, err error) {
+func (s Group) Gallery(page int, folderid ...int) (g Group, err error) {
 	if s.Name == "" {
 		return g, errors.New("missing Name field")
 	}
