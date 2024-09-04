@@ -15,11 +15,25 @@ func try(txt error) {
 	}
 }
 
-// сокращение для вызова щенка и парсинга жсона
-func ujson(data string, output any) {
+func ujson(data string, output any) Error {
 	input, err := puppy(data)
-	try(err)
-	try(json.Unmarshal([]byte(input), output))
+	if err == nil {
+		try(json.Unmarshal([]byte(input), output))
+	}
+	return APIError(err)
+}
+
+type Error struct {
+	Reason string `json:"error"`
+	Error string `json:"errorDescription"`
+	RAW []byte `json:"-"`
+}
+func APIError(inputError error) (err Error) {
+	if inputError != nil {
+		err.RAW = []byte(inputError.Error())
+		try(json.Unmarshal(err.RAW, &err))
+	}
+	return
 }
 
 /* REQUEST SECTION */

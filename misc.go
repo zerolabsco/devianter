@@ -64,8 +64,8 @@ type DailyDeviations struct {
 	Deviations []Deviation
 }
 
-func GetDailyDeviations(page int) (dd DailyDeviations) {
-	ujson("dabrowse/networkbar/rfy/deviations?page="+strconv.Itoa(page), &dd)
+func GetDailyDeviations(page int) (dd DailyDeviations, err Error) {
+	err = ujson("dabrowse/networkbar/rfy/deviations?page="+strconv.Itoa(page), &dd)
 	return
 }
 
@@ -78,9 +78,8 @@ type Search struct {
 	ResultsGalleryTemp []Deviation `json:"results"`
 }
 
-func PerformSearch(query string, page int, scope rune, user ...string) (ss Search, e error) {
+func PerformSearch(query string, page int, scope rune, user ...string) (ss Search, err error, daError Error) {
 	var buildurl strings.Builder
-	e = nil
 
 	// о5 построение ссылок.
 	switch scope {
@@ -90,7 +89,7 @@ func PerformSearch(query string, page int, scope rune, user ...string) (ss Searc
 		buildurl.WriteString("dabrowse/networkbar/tag/deviations?tag=")
 	case 'g', 'f': // поиск артов пользователя или группы
 		if user == nil {
-			e = errors.New("missing username (last argument)")
+			err = errors.New("missing username (last argument)")
 			return
 		}
 
@@ -116,7 +115,7 @@ func PerformSearch(query string, page int, scope rune, user ...string) (ss Searc
 	}
 	buildurl.WriteString(strconv.Itoa(page))
 
-	ujson(buildurl.String(), &ss)
+	daError = ujson(buildurl.String(), &ss)
 
 	if ss.Results == nil {
 		ss.Results = ss.ResultsGalleryTemp

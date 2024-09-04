@@ -58,6 +58,7 @@ type Deviation struct {
 // её выпердыши
 type Media struct {
 	BaseUri string
+  Name string `json:"prettyName"`
 	Token   []string
 	Types   []struct {
 		T    string
@@ -90,7 +91,7 @@ type Post struct {
 }
 
 // преобразование урла в правильный
-func UrlFromMedia(m Media, thumb ...int) string {
+func UrlFromMedia(m Media, thumb ...int) (urlParsed, wellFormattedFilename string) {
 	var url strings.Builder
 
 	subtractWidthHeight := func(to int, target ...*int) {
@@ -108,14 +109,15 @@ func UrlFromMedia(m Media, thumb ...int) string {
 				if len(thumb) != 0 {
 					subtractWidthHeight(thumb[0], &t.W, &t.H)
 				}
+        wellFormattedFilename = m.Name + m.BaseUri[l-4:]
 
 				url.WriteString("/v1/fit/w_")
 				url.WriteString(strconv.Itoa(t.W))
 				url.WriteString(",h_")
 				url.WriteString(strconv.Itoa(t.H))
 				url.WriteString("/")
-				url.WriteString("image")
-				url.WriteString(".gif")
+				url.WriteString(wellFormattedFilename)
+
 			}
 			if len(m.Token) > 0 {
 				url.WriteString("?token=")
@@ -124,18 +126,19 @@ func UrlFromMedia(m Media, thumb ...int) string {
 		}
 	}
 
-	return url.String()
+  urlParsed = url.String()
+
+	return
 }
 
 // для работы функции нужно ID поста и имя пользователя.
-func GetDeviation(id string, user string) Post {
-	var st Post
-	ujson(
+func GetDeviation(id string, user string) (st Post, err Error) {
+	err = ujson(
 		"dadeviation/init?deviationid="+id+"&username="+user+"&type=art&include_session=false&expand=deviation.related&preload=true",
 		&st,
 	)
 
-	st.IMG = UrlFromMedia(st.Deviation.Media)
+	st.IMG, _ = UrlFromMedia(st.Deviation.Media)
 
 	// базовая обработка описания
 	txt := st.Deviation.TextContent.Html.Markup
@@ -151,8 +154,7 @@ func GetDeviation(id string, user string) Post {
 			txt = a.Text
 		}
 	}
-
 	st.Description = txt
-
-	return st
+	
+	return
 }

@@ -35,9 +35,9 @@ type Comments struct {
 }
 
 // 1 - комментарии поста; 4 - комментарии на стене группы или пользователя
-func GetComments(postid string, cursor string, page int, typ int) (cmmts Comments) {
+func GetComments(postid string, cursor string, page int, typ int) (cmmts Comments, err Error) {
 	for x := 0; x <= page; x++ {
-		ujson(
+		err = ujson(
 			"dashared/comments/thread?typeid="+strconv.Itoa(typ)+
 				"&itemid="+postid+"&maxdepth=1000&order=newest"+
 				"&limit=50&cursor="+url.QueryEscape(cursor),

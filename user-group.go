@@ -75,16 +75,16 @@ type Group struct {
 }
 
 // подходит как группа, так и пользователь
-func (s Group) Get() (g GRuser, err error) {
+func (s Group) Get() (g GRuser, err error, daError Error) {
 	if s.Name == "" {
-		return g, errors.New("missing Name field")
+		return g, errors.New("missing Name field"), daError
 	}
-	ujson("dauserprofile/init/about?username="+s.Name, &g)
+	daError = ujson("dauserprofile/init/about?username="+s.Name, &g)
 
 	return
 }
 
-func (s Group) Favourites(page int, all bool, folderid ...int) (g Group) {
+func (s Group) Favourites(page int, all bool, folderid ...int) (g Group, err Error) {
 	var url strings.Builder
 
 	if fid := folderid[0]; fid > 0 || all {
@@ -105,14 +105,14 @@ func (s Group) Favourites(page int, all bool, folderid ...int) (g Group) {
 	url.WriteString("&with_subfolders=true&offset=")
 	url.WriteString(strconv.Itoa(page * 50))
 
-	ujson(url.String(), &g.Content)
+	err = ujson(url.String(), &g.Content)
 	return
 }
 
 // гарелея пользователя или группы
-func (s Group) Gallery(page int, folderid ...int) (g Group, err error) {
+func (s Group) Gallery(page int, folderid ...int) (g Group, err error, daError Error) {
 	if s.Name == "" {
-		return g, errors.New("missing Name field")
+		return g, errors.New("missing Name field"), daError
 	}
 
 	var url strings.Builder
@@ -135,7 +135,7 @@ func (s Group) Gallery(page int, folderid ...int) (g Group, err error) {
 	url.WriteString("limit=50")
 	url.WriteString("&with_subfolders=false")
 
-	ujson(url.String(), &g.Content)
+	daError = ujson(url.String(), &g.Content)
 	return
 }
 
