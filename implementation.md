@@ -1,6 +1,0 @@
-- avatars
-- emojis
-- deviantions
-- comments
-- search (including gallery search)
-- users (with gallery)
