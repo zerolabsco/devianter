@@ -142,7 +142,7 @@ func GetDeviation(id string, user string) (st Post, err Error) {
 
 	// базовая обработка описания
 	txt := st.Deviation.TextContent.Html.Markup
-	if len(txt) > 0 && txt[1] == '{' {
+	if len(txt) > 1 && txt[1] == '{' {
 		var description struct {
 			Blocks []struct {
 				Text string
