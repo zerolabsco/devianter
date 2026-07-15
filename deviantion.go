@@ -79,9 +79,14 @@ type Media struct {
 }
 
 // Text is a block of user-written text — a description, a comment, a group's
-// about page. Markup holds either HTML or a JSON-encoded Draft.js document,
-// distinguished by Type; the functions that return a Text generally extract the
-// plain text into a neighbouring field, which is easier to use.
+// about page.
+//
+// Markup is a rich document rather than a string of prose, in whichever format
+// DeviantArt stored it: tiptap JSON on anything recent (Type is "tiptap"),
+// Draft.js JSON on older bodies, or plain HTML on the oldest. The functions
+// returning a Text generally flatten it to plain text in a neighbouring field,
+// which is what most callers want; read Markup itself for the formatting,
+// images, and links that flattening discards.
 type Text struct {
 	Excerpt string
 	Html    struct {
@@ -91,8 +96,9 @@ type Text struct {
 
 // Post is a deviation together with its comment metadata, as returned by
 // [GetDeviation]. IMG and Description are conveniences that GetDeviation derives
-// from the Deviation, so callers need not assemble a URL or decode Draft.js
-// markup themselves.
+// from the Deviation, so callers need not assemble a URL or flatten a rich-text
+// document themselves. Description is empty for the many deviations that have
+// none.
 //
 // Comments holds only a total and a cursor. To retrieve the comments, pass them
 // to [GetComments] with type 1.
@@ -175,7 +181,14 @@ func GetDeviation(id string, user string) (st Post, err Error) {
 
 	st.IMG, _ = UrlFromMedia(st.Deviation.Media)
 
-	st.Description = flattenComment(st.Deviation.TextContent.Html.Markup)
+	// The description lives in Extended.DescriptionText on the great majority of
+	// deviations; TextContent carries it on only a small minority. Prefer the
+	// former and fall back, since either may be the populated one.
+	desc := st.Deviation.Extended.DescriptionText.Html.Markup
+	if desc == "" {
+		desc = st.Deviation.TextContent.Html.Markup
+	}
+	st.Description = flattenMarkup(desc)
 
 	return
 }
