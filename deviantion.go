@@ -58,7 +58,7 @@ type Deviation struct {
 // её выпердыши
 type Media struct {
 	BaseUri string
-  Name string `json:"prettyName"`
+	Name    string `json:"prettyName"`
 	Token   []string
 	Types   []struct {
 		T    string
@@ -109,7 +109,7 @@ func UrlFromMedia(m Media, thumb ...int) (urlParsed, wellFormattedFilename strin
 				if len(thumb) != 0 {
 					subtractWidthHeight(thumb[0], &t.W, &t.H)
 				}
-        wellFormattedFilename = m.Name + m.BaseUri[l-4:]
+				wellFormattedFilename = m.Name + m.BaseUri[l-4:]
 
 				url.WriteString("/v1/fit/w_")
 				url.WriteString(strconv.Itoa(t.W))
@@ -126,7 +126,7 @@ func UrlFromMedia(m Media, thumb ...int) (urlParsed, wellFormattedFilename strin
 		}
 	}
 
-  urlParsed = url.String()
+	urlParsed = url.String()
 
 	return
 }
@@ -149,14 +149,14 @@ func GetDeviation(id string, user string) (st Post, err Error) {
 			}
 		}
 
-        if err := json.Unmarshal([]byte(txt), &description); err != nil {
-            // Handle error appropriately
-            try(err) // or log/return the error
-        }
-        for _, a := range description.Blocks {
-            txt = a.Text
-        }
-    }
+		if err := json.Unmarshal([]byte(txt), &description); err != nil {
+			// Handle error appropriately
+			try(err) // or log/return the error
+		}
+		for _, a := range description.Blocks {
+			txt = a.Text
+		}
+	}
 	st.Description = txt
 
 	return

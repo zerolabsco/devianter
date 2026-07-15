@@ -76,12 +76,12 @@ type Group struct {
 
 // подходит как группа, так и пользователь
 func (s Group) Get() (g GRuser, daError Error, err error) {
-    if s.Name == "" {
-        return g, daError, errors.New("missing Name field")
-    }
-    daError = ujson("dauserprofile/init/about?username="+s.Name, &g)
+	if s.Name == "" {
+		return g, daError, errors.New("missing Name field")
+	}
+	daError = ujson("dauserprofile/init/about?username="+s.Name, &g)
 
-    return
+	return
 }
 
 func (s Group) Favourites(page int, all bool, folderid ...int) (g Group, err Error) {
@@ -111,9 +111,9 @@ func (s Group) Favourites(page int, all bool, folderid ...int) (g Group, err Err
 
 // гарелея пользователя или группы
 func (s Group) Gallery(page int, folderid ...int) (g Group, daError Error, err error) {
-    if s.Name == "" {
-        return g, daError, errors.New("missing Name field")
-    }
+	if s.Name == "" {
+		return g, daError, errors.New("missing Name field")
+	}
 
 	var url strings.Builder
 	if folderid[0] > 0 {
@@ -135,8 +135,8 @@ func (s Group) Gallery(page int, folderid ...int) (g Group, daError Error, err e
 	url.WriteString("limit=50")
 	url.WriteString("&with_subfolders=false")
 
-    daError = ujson(url.String(), &g.Content)
-    return
+	daError = ujson(url.String(), &g.Content)
+	return
 }
 
 type GroupAbout struct {

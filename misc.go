@@ -81,11 +81,6 @@ type Search struct {
 func PerformSearch(query string, page int, scope rune, user ...string) (ss Search, daError Error, err error) {
 	var buildurl strings.Builder
 
-    if user == nil {
-        err = errors.New("missing username (last argument)")
-        return
-    }
-
 	// о5 построение ссылок.
 	switch scope {
 	case 'a': // поиск артов по названию

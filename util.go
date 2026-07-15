@@ -27,9 +27,10 @@ func ujson(data string, output any) Error {
 
 type Error struct {
 	Reason string `json:"error"`
-	Error string `json:"errorDescription"`
-	RAW []byte `json:"-"`
+	Error  string `json:"errorDescription"`
+	RAW    []byte `json:"-"`
 }
+
 func APIError(inputError error) (err Error) {
 	if inputError != nil {
 		err.RAW = []byte(inputError.Error())
@@ -94,11 +95,11 @@ func request(uri string, other ...string) reqrt {
 		r.Err = e
 		return r
 	}
-    defer func() {
-        if err := resp.Body.Close(); err != nil {
-            try(err)
-        }
-    }()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			try(err)
+		}
+	}()
 
 	body, e := io.ReadAll(resp.Body)
 	if e != nil {
