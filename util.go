@@ -10,13 +10,22 @@ import (
 	"time"
 )
 
-// функция для высера ошибки в stderr
+// try prints a non-nil error to stderr and swallows it. It is how this package
+// reports problems it does not propagate, such as a response that parsed only
+// partially.
 func try(txt error) {
 	if txt != nil {
 		println(txt.Error())
 	}
 }
 
+// ujson fetches a _puppy endpoint and unmarshals the response into output.
+// data is the path and query string after the endpoint root, without a leading
+// slash and without the csrf_token parameter, which puppy appends.
+//
+// A malformed response is reported through try and leaves output partially
+// populated, so a returned Error with an empty Reason does not by itself
+// guarantee that output is complete.
 func ujson(data string, output any) Error {
 	input, err := puppy(data)
 	if err == nil {
@@ -25,12 +34,23 @@ func ujson(data string, output any) Error {
 	return APIError(err)
 }
 
+// Error is a failed API call. It is a struct rather than an error interface, so
+// a zero value means success: test Reason for emptiness rather than comparing
+// against nil.
+//
+// For errors DeviantArt itself reports, Reason and Error hold its machine and
+// human readable descriptions. For anything else (a transport failure, or a
+// CloudFront block page) Reason is "request_failed" and Error carries the
+// underlying message.
 type Error struct {
 	Reason string `json:"error"`
 	Error  string `json:"errorDescription"`
 	RAW    []byte `json:"-"`
 }
 
+// APIError converts an error from the request layer into an [Error], decoding
+// DeviantArt's JSON error body when that is what it is. A nil input yields the
+// zero Error, which signals success.
 func APIError(inputError error) (err Error) {
 	if inputError != nil {
 		err.RAW = []byte(inputError.Error())
@@ -46,7 +66,8 @@ func APIError(inputError error) (err Error) {
 }
 
 /* REQUEST SECTION */
-// структура для ответа сервера
+// reqrt is a completed HTTP response, flattened into the pieces this package
+// needs. On a transport failure Err is set and every other field is zero.
 type reqrt struct {
 	Body    string
 	Status  int
@@ -56,17 +77,21 @@ type reqrt struct {
 	Err error
 }
 
-// функция для совершения запроса
+// UserAgent overrides the browser User-Agent this package sends by default.
+// Setting it to something that identifies your client is polite, but DeviantArt
+// is more likely to serve a block page to a non-browser agent.
 var UserAgent string
 
 // Timeout bounds a single request end-to-end (dial, response, body read).
 // Without it, a hung connection blocks its caller forever.
 var Timeout = 30 * time.Second
 
+// request performs a GET and never panics or returns a partial response without
+// saying so: any failure is reported in reqrt.Err. An optional second argument
+// supplies the Cookie header.
 func request(uri string, other ...string) reqrt {
 	var r reqrt
 
-	// создаём новый запрос
 	// Transport is deliberately left nil so http.DefaultTransport applies: that
 	// keeps HTTPS_PROXY support and lets callers wrap it (e.g. to rate-limit).
 	cli := &http.Client{Timeout: Timeout}
@@ -77,9 +102,10 @@ func request(uri string, other ...string) reqrt {
 		return r
 	}
 
+	// Impersonate a browser by default: the endpoints are the web frontend's own,
+	// and an unfamiliar agent draws a block page.
 	req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:123.0) Gecko/20100101 Firefox/123.0.0")
 
-	// куки и UA-шник
 	if UserAgent != "" {
 		req.Header.Set("User-Agent", UserAgent)
 	}
@@ -107,7 +133,6 @@ func request(uri string, other ...string) reqrt {
 		r.Err = e
 	}
 
-	// заполняем структуру
 	r.Body = string(body)
 	r.Cookies = resp.Cookies()
 	r.Headers = resp.Header
@@ -145,7 +170,11 @@ func describe(r reqrt) string {
 }
 
 /* PUPPY aka DeviantArt API */
-// получение или обновление токена
+// The guest session: a cookie from the _puppy endpoint and a CSRF token scraped
+// from the homepage. UpdateCSRF populates both; puppy sends them on every call.
+//
+// These are package-level and unsynchronised, so a program that calls UpdateCSRF
+// concurrently with any other function of this package races on them.
 var cookie string
 var token string
 
@@ -154,6 +183,18 @@ const (
 	xhrMarker  = "window.__XHR_LOCAL__"
 )
 
+// UpdateCSRF establishes the guest session that every other call in this package
+// depends on, and must be called before them. It fetches a session cookie (only
+// on the first call; later calls reuse it) and scrapes a fresh CSRF token from
+// the DeviantArt homepage.
+//
+// Tokens expire, so a long-running program should call this again when requests
+// begin to fail. It is not safe to call concurrently with other functions of
+// this package.
+//
+// An error means the session was not established: the homepage was blocked,
+// served a challenge, or changed its markup such that the token is no longer
+// where this package looks for it.
 func UpdateCSRF() error {
 	if cookie == "" {
 		req := request("https://www.deviantart.com/_puppy")
@@ -187,6 +228,13 @@ func UpdateCSRF() error {
 	return nil
 }
 
+// puppy calls a _puppy endpoint with the guest session applied and returns the
+// raw JSON body. data is a path and query string; the CSRF token and API version
+// are appended to it, so it must already end in a parameter (callers conclude
+// theirs with a trailing "&" or a final value).
+//
+// It returns an error for a transport failure, a non-200 status, or a 200 whose
+// body is not JSON, which is how a CDN block page arrives.
 func puppy(data string) (string, error) {
 	var url strings.Builder
 	url.WriteString("https://www.deviantart.com/_puppy/")
@@ -200,7 +248,6 @@ func puppy(data string) (string, error) {
 		return "", body.Err
 	}
 
-	// если код ответа не 200, возвращается ошибка
 	if body.Status != 200 {
 		return "", errors.New(describe(body))
 	}
