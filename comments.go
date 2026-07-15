@@ -2,6 +2,7 @@ package devianter
 
 import (
 	"encoding/json"
+	"html"
 	"net/url"
 	"strconv"
 	"strings"
@@ -25,6 +26,10 @@ type Thread struct {
 
 	// Comment is the comment's plain text, which [GetComments] extracts from
 	// TextContent. Prefer it; TextContent is the unprocessed original.
+	//
+	// Text is all it holds: a comment is a rich document, and its images,
+	// emotes, mentions, and link targets are dropped in the flattening. Read
+	// TextContent for those.
 	Comment string
 
 	TextContent Text
@@ -71,46 +76,105 @@ func GetComments(postid string, cursor string, page int, typ int) (cmmts Comment
 		cursor = cmmts.Cursor
 
 		for i := 0; i < len(cmmts.Thread); i++ {
-			cmmts.Thread[i].Comment = flattenComment(cmmts.Thread[i].TextContent.Html.Markup)
+			cmmts.Thread[i].Comment = flattenMarkup(cmmts.Thread[i].TextContent.Html.Markup)
 		}
 	}
 
 	return
 }
 
-// flattenComment renders a body of user-written markup as plain text, be it a
-// comment or a deviation's description. Bodies are JSON inside JSON: newer ones
-// are a Draft.js document encoded into the markup string, older ones are plain
-// HTML, which passes through unchanged. Markup that does not parse, and empty
-// markup, also pass through.
+// flattenMarkup renders a body of user-written markup as plain text, be it a
+// comment or a deviation's description. Bodies are JSON inside JSON, and
+// DeviantArt still serves all three formats it has used over the years:
 //
-// A Draft.js document is a list of blocks, which are block-level elements
-// (paragraphs, list items); they are joined with newlines, one block per line.
-func flattenComment(m string) string {
+//   - tiptap, current: {"version":1,"document":{"type":"doc","content":[...]}}
+//   - Draft.js, legacy: {"blocks":[{"text":"..."}]}
+//   - plain HTML, oldest, which passes through unchanged
+//
+// Block-level elements (paragraphs, headings) are joined with newlines, one per
+// line, and a hard break inside one becomes a newline too. HTML entities in the
+// text are decoded, so a body reads as &#8217; on the wire but an apostrophe
+// here. Markup matching no known format passes through unchanged rather than
+// being replaced by an empty string.
+func flattenMarkup(m string) string {
 	l := len(m)
 	if l == 0 || m[0] != '{' || m[l-1] != '}' {
 		return m
 	}
 
+	if text, ok := flattenTiptap(m); ok {
+		return text
+	}
+	if text, ok := flattenDraftJS(m); ok {
+		return text
+	}
+	return m
+}
+
+// tiptapNode is one node of a tiptap (ProseMirror) document tree.
+//
+// The document's "version" field is deliberately not modelled: DeviantArt sends
+// it as a number on some bodies and a string on others, so any typed field for
+// it fails to unmarshal on half of them.
+type tiptapNode struct {
+	Type    string       `json:"type"`
+	Text    string       `json:"text"`
+	Content []tiptapNode `json:"content"`
+}
+
+// flattenTiptap renders a tiptap document, reporting false if the markup is not
+// one.
+func flattenTiptap(m string) (string, bool) {
+	var doc struct {
+		Document tiptapNode `json:"document"`
+	}
+	if json.Unmarshal([]byte(m), &doc) != nil || doc.Document.Type != "doc" {
+		return "", false
+	}
+
+	lines := make([]string, 0, len(doc.Document.Content))
+	for _, block := range doc.Document.Content {
+		var b strings.Builder
+		writeTiptapText(block, &b)
+		lines = append(lines, b.String())
+	}
+
+	return html.UnescapeString(strings.Join(lines, "\n")), true
+}
+
+// writeTiptapText collects the text of a node and everything nested inside it.
+// Nodes carrying no text of their own — images, galleries, emotes — contribute
+// nothing.
+func writeTiptapText(n tiptapNode, b *strings.Builder) {
+	switch n.Type {
+	case "text":
+		b.WriteString(n.Text)
+		return
+	case "hardBreak":
+		b.WriteString("\n")
+		return
+	}
+	for _, c := range n.Content {
+		writeTiptapText(c, b)
+	}
+}
+
+// flattenDraftJS renders a legacy Draft.js document, reporting false if the
+// markup is not one.
+func flattenDraftJS(m string) (string, bool) {
 	var content struct {
 		Blocks []struct {
 			Text string
 		}
 	}
-
-	e := json.Unmarshal([]byte(m), &content)
-	try(e)
-
-	if len(content.Blocks) == 0 {
-		return m
+	if json.Unmarshal([]byte(m), &content) != nil || len(content.Blocks) == 0 {
+		return "", false
 	}
 
-	var b strings.Builder
-	for i, a := range content.Blocks {
-		if i > 0 {
-			b.WriteString("\n")
-		}
-		b.WriteString(a.Text)
+	lines := make([]string, 0, len(content.Blocks))
+	for _, blk := range content.Blocks {
+		lines = append(lines, blk.Text)
 	}
-	return b.String()
+
+	return html.UnescapeString(strings.Join(lines, "\n")), true
 }
