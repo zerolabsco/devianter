@@ -94,7 +94,11 @@ func request(uri string, other ...string) reqrt {
 		r.Err = e
 		return r
 	}
-	defer resp.Body.Close()
+    defer func() {
+        if err := resp.Body.Close(); err != nil {
+            try(err)
+        }
+    }()
 
 	body, e := io.ReadAll(resp.Body)
 	if e != nil {

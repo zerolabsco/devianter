@@ -149,12 +149,15 @@ func GetDeviation(id string, user string) (st Post, err Error) {
 			}
 		}
 
-		json.Unmarshal([]byte(txt), &description)
-		for _, a := range description.Blocks {
-			txt = a.Text
-		}
-	}
+        if err := json.Unmarshal([]byte(txt), &description); err != nil {
+            // Handle error appropriately
+            try(err) // or log/return the error
+        }
+        for _, a := range description.Blocks {
+            txt = a.Text
+        }
+    }
 	st.Description = txt
-	
+
 	return
 }

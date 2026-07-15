@@ -78,8 +78,13 @@ type Search struct {
 	ResultsGalleryTemp []Deviation `json:"results"`
 }
 
-func PerformSearch(query string, page int, scope rune, user ...string) (ss Search, err error, daError Error) {
+func PerformSearch(query string, page int, scope rune, user ...string) (ss Search, daError Error, err error) {
 	var buildurl strings.Builder
+
+    if user == nil {
+        err = errors.New("missing username (last argument)")
+        return
+    }
 
 	// о5 построение ссылок.
 	switch scope {
