@@ -2,7 +2,6 @@ package devianter
 
 import (
 	"errors"
-	"log"
 	"math"
 	"net/url"
 	"strconv"
@@ -18,8 +17,7 @@ import (
 // and returns the first that exists — up to three requests per call, and three
 // for a name that does not exist.
 //
-// Passing any other t terminates the process, as this calls log.Fatalln rather
-// than returning an error.
+// Passing any other t returns an error without making a request.
 func AEmedia(name string, t rune) (string, error) {
 	if len(name) < 2 {
 		return "", errors.New("name must be specified")
@@ -47,7 +45,7 @@ func AEmedia(name string, t rune) (string, error) {
 		b.WriteString(name[:1])
 		b.WriteString("/")
 	default:
-		log.Fatalln("Invalid type.\n- 'a' -- avatar;\n- 'e' -- emoji.")
+		return "", errors.New("invalid type: want 'a' (avatar) or 'e' (emoji)")
 	}
 	b.WriteString(name)
 
@@ -114,8 +112,7 @@ type Search struct {
 // Pages are zero-based. A guest session cannot page beyond roughly 417 pages
 // deep regardless of how many results Total claims.
 //
-// Passing any other scope terminates the process, as this calls log.Fatalln
-// rather than returning an error.
+// Passing any other scope returns an error without making a request.
 func PerformSearch(query string, page int, scope rune, user ...string) (ss Search, daError Error, err error) {
 	var buildurl strings.Builder
 
@@ -140,7 +137,8 @@ func PerformSearch(query string, page int, scope rune, user ...string) (ss Searc
 		}
 		buildurl.WriteString("&order=most-recent&init=true&limit=50&q=")
 	default:
-		log.Fatalln("Invalid type.\n- 'a' -- all;\n- 't' -- tag;\n- 'g' - gallery\n- 'f' - folders.")
+		err = errors.New("invalid scope: want 'a' (all), 't' (tag), 'g' (gallery) or 'f' (favourites)")
+		return
 	}
 
 	buildurl.WriteString(url.QueryEscape(query))

@@ -116,12 +116,17 @@ func (s Group) Get() (g GRuser, daError Error, err error) {
 // positive folderid to read a single folder, or 0 for the profile's default
 // favourites listing.
 //
-// folderid is variadic but not optional: omitting it panics. Pass 0 where you
-// have no folder in mind.
+// folderid is optional; omitting it is the same as passing 0. Only the first
+// value is used.
 func (s Group) Favourites(page int, all bool, folderid ...int) (g Group, err Error) {
 	var url strings.Builder
 
-	if fid := folderid[0]; fid > 0 || all {
+	fid := 0
+	if len(folderid) > 0 {
+		fid = folderid[0]
+	}
+
+	if fid > 0 || all {
 		url.WriteString("dashared/gallection/contents")
 		if all {
 			url.WriteString("?all_folder=true")
@@ -146,8 +151,8 @@ func (s Group) Favourites(page int, all bool, folderid ...int) (g Group, err Err
 // Gallery retrieves a page of the profile's gallery, 50 deviations at a time.
 // Pass a positive folderid to read one folder, or 0 for the whole gallery.
 //
-// folderid is variadic but not optional: omitting it panics. Pass 0 where you
-// have no folder in mind.
+// folderid is optional; omitting it is the same as passing 0. Only the first
+// value is used.
 //
 // Note that page is interpreted differently by the two paths this takes: the
 // whole-gallery listing is zero-based, while a folder listing is one-based.
@@ -156,13 +161,18 @@ func (s Group) Gallery(page int, folderid ...int) (g Group, daError Error, err e
 		return g, daError, errors.New("missing Name field")
 	}
 
+	fid := 0
+	if len(folderid) > 0 {
+		fid = folderid[0]
+	}
+
 	var url strings.Builder
-	if folderid[0] > 0 {
+	if fid > 0 {
 		page--
 		url.WriteString("dashared/gallection/contents?username=")
 		url.WriteString(s.Name)
 		url.WriteString("&folderid=")
-		url.WriteString(strconv.Itoa(folderid[0]))
+		url.WriteString(strconv.Itoa(fid))
 		url.WriteString("&offset=")
 		url.WriteString(strconv.Itoa(page * 50))
 		url.WriteString("&type=gallery&")

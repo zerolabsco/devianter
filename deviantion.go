@@ -1,7 +1,6 @@
 package devianter
 
 import (
-	"encoding/json"
 	"strconv"
 	"strings"
 	"time"
@@ -176,25 +175,7 @@ func GetDeviation(id string, user string) (st Post, err Error) {
 
 	st.IMG, _ = UrlFromMedia(st.Deviation.Media)
 
-	// The description arrives as either HTML or a JSON-encoded Draft.js document;
-	// in the latter case flatten its blocks down to plain text.
-	txt := st.Deviation.TextContent.Html.Markup
-	if len(txt) > 1 && txt[1] == '{' {
-		var description struct {
-			Blocks []struct {
-				Text string
-			}
-		}
-
-		if err := json.Unmarshal([]byte(txt), &description); err != nil {
-			// Handle error appropriately
-			try(err) // or log/return the error
-		}
-		for _, a := range description.Blocks {
-			txt = a.Text
-		}
-	}
-	st.Description = txt
+	st.Description = flattenComment(st.Deviation.TextContent.Html.Markup)
 
 	return
 }

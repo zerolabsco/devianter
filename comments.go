@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/url"
 	"strconv"
+	"strings"
 )
 
 // Thread is a single comment, despite the name. Replies are not nested inside
@@ -69,29 +70,47 @@ func GetComments(postid string, cursor string, page int, typ int) (cmmts Comment
 
 		cursor = cmmts.Cursor
 
-		// Comment bodies are JSON inside JSON: newer ones are a Draft.js document
-		// encoded into the markup string, older ones are plain HTML. Flatten the
-		// former to plain text and pass the latter through.
 		for i := 0; i < len(cmmts.Thread); i++ {
-			m, l := cmmts.Thread[i].TextContent.Html.Markup, len(cmmts.Thread[i].TextContent.Html.Markup)
-			cmmts.Thread[i].Comment = m
-
-			if m[0] == '{' && m[l-1] == '}' {
-				var content struct {
-					Blocks []struct {
-						Text string
-					}
-				}
-
-				e := json.Unmarshal([]byte(m), &content)
-				try(e)
-
-				for _, a := range content.Blocks {
-					cmmts.Thread[i].Comment = a.Text
-				}
-			}
+			cmmts.Thread[i].Comment = flattenComment(cmmts.Thread[i].TextContent.Html.Markup)
 		}
 	}
 
 	return
+}
+
+// flattenComment renders a body of user-written markup as plain text, be it a
+// comment or a deviation's description. Bodies are JSON inside JSON: newer ones
+// are a Draft.js document encoded into the markup string, older ones are plain
+// HTML, which passes through unchanged. Markup that does not parse, and empty
+// markup, also pass through.
+//
+// A Draft.js document is a list of blocks, which are block-level elements
+// (paragraphs, list items); they are joined with newlines, one block per line.
+func flattenComment(m string) string {
+	l := len(m)
+	if l == 0 || m[0] != '{' || m[l-1] != '}' {
+		return m
+	}
+
+	var content struct {
+		Blocks []struct {
+			Text string
+		}
+	}
+
+	e := json.Unmarshal([]byte(m), &content)
+	try(e)
+
+	if len(content.Blocks) == 0 {
+		return m
+	}
+
+	var b strings.Builder
+	for i, a := range content.Blocks {
+		if i > 0 {
+			b.WriteString("\n")
+		}
+		b.WriteString(a.Text)
+	}
+	return b.String()
 }
